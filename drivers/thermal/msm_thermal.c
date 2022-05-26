@@ -2630,6 +2630,11 @@ static int therm_get_temp(uint32_t id, enum sensor_id_type type, int *temp)
 		goto get_temp_exit;
 	}
 
+	if (id == -19) {
+		ret = -EINVAL;
+		goto get_temp_exit;
+	}
+
 	switch (type) {
 	case THERM_ZONE_ID:
 		ret = sensor_get_temp(id, temp);
@@ -2689,6 +2694,11 @@ int sensor_mgr_set_threshold(uint32_t zone_id,
 
 	if (!threshold) {
 		pr_err("Invalid input\n");
+		ret = -EINVAL;
+		goto set_threshold_exit;
+	}
+
+	if (zone_id == -19) {
 		ret = -EINVAL;
 		goto set_threshold_exit;
 	}
@@ -3761,6 +3771,8 @@ static int hotplug_init_cpu_offlined(void)
 	mutex_lock(&core_control_mutex);
 	for_each_possible_cpu(cpu) {
 		if (!(msm_thermal_info.core_control_mask & BIT(cpus[cpu].cpu)))
+			continue;
+		if (cpus[cpu].sensor_id == -19)
 			continue;
 		if (therm_get_temp(cpus[cpu].sensor_id, cpus[cpu].id_type,
 					&temp)) {
@@ -6011,11 +6023,6 @@ static int probe_vdd_mx(struct device_node *node,
 		return ret;
 	}
 
-	key = "qcom,mx-restriction-temp";
-	ret = of_property_read_u32(node, key, &data->vdd_mx_temp_degC);
-	if (ret)
-		goto read_node_done;
-
 	key = "qcom,mx-restriction-temp-hysteresis";
 	ret = of_property_read_u32(node, key, &data->vdd_mx_temp_hyst_degC);
 	if (ret)
@@ -6537,11 +6544,6 @@ static int probe_ocr(struct device_node *node, struct msm_thermal_data *data,
 		goto read_ocr_exit;
 	}
 
-	key = "qcom,pmic-opt-curr-temp";
-	ret = of_property_read_u32(node, key, &data->ocr_temp_degC);
-	if (ret)
-		goto read_ocr_fail;
-
 	key = "qcom,pmic-opt-curr-temp-hysteresis";
 	ret = of_property_read_u32(node, key, &data->ocr_temp_hyst_degC);
 	if (ret)
@@ -6654,11 +6656,6 @@ static int probe_psm(struct device_node *node, struct msm_thermal_data *data,
 		psm_rails_cnt = 0;
 		return ret;
 	}
-
-	key = "qcom,pmic-sw-mode-temp";
-	ret = of_property_read_u32(node, key, &data->psm_temp_degC);
-	if (ret)
-		goto read_node_fail;
 
 	key = "qcom,pmic-sw-mode-temp-hysteresis";
 	ret = of_property_read_u32(node, key, &data->psm_temp_hyst_degC);
@@ -6786,12 +6783,6 @@ static int probe_gfx_phase_ctrl(struct device_node *node,
 		return ret;
 	}
 
-	key = "qcom,gfx-sensor-id";
-	ret = of_property_read_u32(node, key,
-		&data->gfx_sensor);
-	if (ret)
-		goto probe_gfx_exit;
-
 	key = "qcom,gfx-phase-resource-key";
 	ret = of_property_read_string(node, key,
 		&tmp_str);
@@ -6889,13 +6880,6 @@ static int probe_cx_phase_ctrl(struct device_node *node,
 		return ret;
 	}
 
-	key = "qcom,rpm-phase-resource-type";
-	ret = of_property_read_string(node, key,
-		&tmp_str);
-	if (ret)
-		goto probe_cx_exit;
-	data->phase_rpm_resource_type = msm_thermal_str_to_int(tmp_str);
-
 	key = "qcom,rpm-phase-resource-id";
 	ret = of_property_read_u32(node, key,
 		&data->phase_rpm_resource_id);
@@ -6990,11 +6974,6 @@ static int probe_freq_mitigation(struct device_node *node,
 {
 	char *key = NULL;
 	int ret = 0;
-
-	key = "qcom,limit-temp";
-	ret = of_property_read_u32(node, key, &data->limit_temp_degC);
-	if (ret)
-		goto PROBE_FREQ_EXIT;
 
 	key = "qcom,temp-hysteresis";
 	ret = of_property_read_u32(node, key, &data->temp_hysteresis_degC);
@@ -7583,7 +7562,7 @@ int __init msm_thermal_device_init(void)
 {
 	return platform_driver_register(&msm_thermal_device_driver);
 }
-arch_initcall(msm_thermal_device_init);
+subsys_initcall(msm_thermal_device_init);
 
 int __init msm_thermal_late_init(void)
 {

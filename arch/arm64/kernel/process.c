@@ -105,16 +105,6 @@ void arch_cpu_idle_dead(void)
 #endif
 
 /*
- *  Enter non-interruptable CPU halt state
- */
-static void cpu_halt(void)
-{
-	local_irq_disable();
-	while (1)
-	cpu_do_idle();
-}
-
-/*
  * Called by kexec, immediately prior to machine_kexec().
  *
  * This must completely disable all secondary CPUs; simply causing those CPUs
@@ -126,7 +116,6 @@ static void cpu_halt(void)
 void machine_shutdown(void)
 {
 	disable_nonboot_cpus();
-        cpu_halt();
 }
 
 /*
@@ -136,8 +125,9 @@ void machine_shutdown(void)
  */
 void machine_halt(void)
 {
+	local_irq_disable();
 	smp_send_stop();
-        cpu_halt();
+	while (1);
 }
 
 /*
@@ -152,7 +142,6 @@ void machine_power_off(void)
 	smp_send_stop();
 	if (pm_power_off)
 		pm_power_off();
-	cpu_halt();
 }
 
 /*
@@ -187,7 +176,7 @@ void machine_restart(char *cmd)
 	 * Whoops - the architecture was unable to reboot.
 	 */
 	printk("Reboot failed -- System halted\n");
-        cpu_halt();
+	while (1);
 }
 
 /*
@@ -283,6 +272,7 @@ void show_regs(struct pt_regs * regs)
 {
 	printk("\n");
 	__show_regs(regs);
+	dump_backtrace(regs, NULL);
 }
 
 static void tls_thread_flush(void)
@@ -352,9 +342,6 @@ int copy_thread(unsigned long clone_flags, unsigned long stack_start,
 		if (stack_start) {
 			if (is_compat_thread(task_thread_info(p)))
 				childregs->compat_sp = stack_start;
-			/* 16-byte aligned stack mandatory on AArch64 */
-			else if (stack_start & 15)
-				return -EINVAL;
 			else
 				childregs->sp = stack_start;
 		}
@@ -427,7 +414,7 @@ static void entry_task_switch(struct task_struct *next)
 /*
  * Thread switching.
  */
-struct task_struct *__switch_to(struct task_struct *prev,
+__notrace_funcgraph struct task_struct *__switch_to(struct task_struct *prev,
 				struct task_struct *next)
 {
 	struct task_struct *last;

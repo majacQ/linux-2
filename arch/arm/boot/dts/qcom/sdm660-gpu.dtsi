@@ -67,10 +67,13 @@
 
 		qcom,chipid = <0x05010200>;
 
+		/* To disable GPU wake up on touch event */
+		qcom,disable-wake-on-touch;
+
 		qcom,initial-pwrlevel = <6>;
 
 		/* <HZ/12> */
-		qcom,idle-timeout = <80>;
+		qcom,idle-timeout = <60>;
 
 		qcom,highest-bank-bit = <14>;
 
@@ -122,10 +125,6 @@
 		qcom,gpu-cx-ipeak = <&cx_ipeak_lm 1>;
 		qcom,gpu-cx-ipeak-clk = <700000000>;
 
-		/* CPU latency parameter */
-		qcom,pm-qos-active-latency = <518>;
-		qcom,pm-qos-wakeup-latency = <518>;
-
 		/* Quirks */
 		qcom,gpu-quirk-dp2clockgating-disable;
 		qcom,gpu-quirk-lmloadkill-disable;
@@ -137,7 +136,7 @@
 		qcom,ca-busy-penalty = <12000>;
 
 		/* Context aware jump target power level */
-		qcom,ca-target-pwrlevel = <4>;
+		qcom,ca-target-pwrlevel = <5>;
 
 		qcom,gpu-speed-bin = <0x41a0 0x1fe00000 21>;
 
@@ -178,7 +177,7 @@
 			#size-cells = <0>;
 
 			qcom,speed-bin = <0>;
-			qcom,initial-pwrlevel = <5>;
+			qcom,initial-pwrlevel = <7>;
 
 			qcom,gpu-pwrlevel@0 {
 				reg = <0>;
@@ -242,7 +241,7 @@
 			#size-cells = <0>;
 
 			qcom,speed-bin = <1>;
-			qcom,initial-pwrlevel = <5>;
+			qcom,initial-pwrlevel = <6>;
 
 			qcom,gpu-pwrlevel@0 {
 				reg = <0>;
@@ -535,36 +534,36 @@
 				qcom,gpu-pwrlevel@0 {
 					reg = <0>;
 					qcom,gpu-freq = <430000000>;
-					qcom,bus-freq = <11>;
+					qcom,bus-freq = <13>;
 					qcom,bus-min = <10>;
-					qcom,bus-max = <11>;
+					qcom,bus-max = <13>;
 				};
 
 				/* SVS */
 				qcom,gpu-pwrlevel@1 {
 					reg = <1>;
 					qcom,gpu-freq = <370000000>;
-					qcom,bus-freq = <8>;
+					qcom,bus-freq = <13>;
 					qcom,bus-min = <6>;
-					qcom,bus-max = <11>;
+					qcom,bus-max = <13>;
 				};
 
 				/* Low SVS */
 				qcom,gpu-pwrlevel@2 {
 					reg = <2>;
 					qcom,gpu-freq = <266000000>;
-					qcom,bus-freq = <3>;
+					qcom,bus-freq = <8>;
 					qcom,bus-min = <3>;
-					qcom,bus-max = <6>;
+					qcom,bus-max = <8>;
 				};
 
 				/* Min SVS */
 				qcom,gpu-pwrlevel@3 {
 					reg = <3>;
 					qcom,gpu-freq = <160000000>;
-					qcom,bus-freq = <3>;
+					qcom,bus-freq = <7>;
 					qcom,bus-min = <3>;
-					qcom,bus-max = <5>;
+					qcom,bus-max = <7>;
 				};
 
 				/* XO */

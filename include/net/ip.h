@@ -33,7 +33,7 @@
 #include <net/flow.h>
 #include <net/flow_dissector.h>
 
-#define IPV4_MIN_MTU		68			/* RFC 791 */
+#define IPV4_MIN_MTU		1472			/* RFC 791 */
 
 struct sock;
 
@@ -604,5 +604,10 @@ extern int sysctl_icmp_msgs_burst;
 #ifdef CONFIG_PROC_FS
 int ip_misc_proc_init(void);
 #endif
+
+static inline bool inetdev_valid_mtu(unsigned int mtu)
+{
+	return likely(mtu >= IPV4_MIN_MTU);
+}
 
 #endif	/* _IP_H */

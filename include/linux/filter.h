@@ -453,6 +453,8 @@ int sk_attach_filter(struct sock_fprog *fprog, struct sock *sk);
 int __sk_attach_filter(struct sock_fprog *fprog, struct sock *sk,
 		       bool locked);
 int sk_attach_bpf(u32 ufd, struct sock *sk);
+int sk_reuseport_attach_filter(struct sock_fprog *fprog, struct sock *sk);
+int sk_reuseport_attach_bpf(u32 ufd, struct sock *sk);
 int sk_detach_filter(struct sock *sk);
 int __sk_detach_filter(struct sock *sk, bool locked);
 
@@ -465,9 +467,6 @@ void sk_filter_uncharge(struct sock *sk, struct sk_filter *fp);
 u64 __bpf_call_base(u64 r1, u64 r2, u64 r3, u64 r4, u64 r5);
 void bpf_int_jit_compile(struct bpf_prog *fp);
 bool bpf_helper_changes_skb_data(void *func);
-
-struct bpf_prog *bpf_patch_insn_single(struct bpf_prog *prog, u32 off,
-				       const struct bpf_insn *patch, u32 len);
 
 #ifdef CONFIG_BPF_JIT
 typedef void (*bpf_jit_fill_hole_t)(void *area, unsigned int size);

@@ -11,6 +11,9 @@
 #include <linux/bug.h>
 #include <linux/restart_block.h>
 
+struct timespec;
+struct compat_timespec;
+
 #ifdef CONFIG_THREAD_INFO_IN_TASK
 /*
  * For CONFIG_THREAD_INFO_IN_TASK kernels we need <asm/current.h> for the
@@ -137,6 +140,6 @@ static inline void check_object_size(const void *ptr, unsigned long n,
 { }
 #endif /* CONFIG_HARDENED_USERCOPY */
 
-#endif	/* __KERNEL__ */
+#endif /* __KERNEL__ */
 
-#endif /* _LINUX_THREAD_INFO_H */
+#endif /* CONFIG_THREAD_INFO_IN_TASK */

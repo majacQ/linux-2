@@ -763,12 +763,12 @@ void sar_switch(bool switcher)
 
 	if (sar_switcher) {//sar_switcher is 1 for Indonesia, open sarsensor
 		if (switcher) {//switch on
-			dev_info(psx93XX_this->pdev, "Indonesia: going to enable SAR!\n");
+			dev_dbg(psx93XX_this->pdev, "Indonesia: going to enable SAR!\n");
 			write_register(psx93XX_this, SX9310_IRQ_ENABLE_REG, 0x70);
 			write_register(psx93XX_this, SX9310_CPS_CTRL0_REG, 0x51);
 			enable_irq(psx93XX_this->irq);
 		} else {//switch off
-			dev_info(psx93XX_this->pdev, "Indonesia: going to disable SAR!\n");
+			dev_dbg(psx93XX_this->pdev, "Indonesia: going to disable SAR!\n");
 			disable_irq(psx93XX_this->irq);
 			write_register(psx93XX_this, SX9310_IRQ_ENABLE_REG, 0);
 			write_register(psx93XX_this, SX9310_CPS_CTRL0_REG, 0);
@@ -784,7 +784,7 @@ void sar_switch(bool switcher)
 			/* Huaqin add to report near event when sar switche off by chenyijun5 at 2018/03/22 end*/
 		}
 	} else {//other countries, do nothing
-		dev_info(psx93XX_this->pdev, "not Indonesia: do nothing about SAR!\n");
+		dev_dbg(psx93XX_this->pdev, "not Indonesia: do nothing about SAR!\n");
 		return;
 	}
 
@@ -928,7 +928,7 @@ static void touchProcess(psx93XX_t this)
 				if (((i & pCurrentButton->mask) ==
 				     pCurrentButton->mask)) {
 					/* User pressed button */
-					dev_info(this->pdev,
+					dev_dbg(this->pdev,
 						 "cap button %d touched\n",
 						 counter);
 					/*
@@ -949,7 +949,7 @@ static void touchProcess(psx93XX_t this)
 				if (((i & pCurrentButton->mask) !=
 				     pCurrentButton->mask)) {
 					/* User released button */
-					dev_info(this->pdev,
+					dev_dbg(this->pdev,
 						 "cap button %d released\n",
 						 counter);
 					/*
@@ -984,7 +984,7 @@ static int sx9310_get_nirq_state(void)
 		pr_err("sx9310 irq_gpio was not assigned properly");
 	}
 	value = gpio_get_value(PSX9310Device->hw->irq_gpio);
-	pr_info("sx9310 irq gpio status(%d)", value);
+	pr_debug("sx9310 irq gpio status(%d)", value);
 	return !value;
 }
 

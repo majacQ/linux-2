@@ -13,15 +13,15 @@
 
 #include <asm/cacheflush.h>
 #include <asm/idmap.h>
+#include <asm/virt.h>
 
 #include "reboot.h"
 
-typedef void (*phys_reset_t)(unsigned long);
+typedef void (*phys_reset_t)(unsigned long, bool);
 
 /*
  * Function pointers to optional machine specific functions
  */
-void (*arm_pm_restart)(enum reboot_mode reboot_mode, const char *cmd);
 void (*pm_power_off)(void);
 EXPORT_SYMBOL(pm_power_off);
 
@@ -51,8 +51,10 @@ static void __soft_restart(void *addr)
 	flush_cache_all();
 
 	/* Switch to the identity mapping. */
-	phys_reset = (phys_reset_t)(unsigned long)virt_to_idmap(cpu_reset);
-	phys_reset((unsigned long)addr);
+	phys_reset = (phys_reset_t)virt_to_idmap(cpu_reset);
+
+	/* original stub should be restored by kvm */
+	phys_reset((unsigned long)addr, is_hyp_mode_available());
 
 	/* Should never get here. */
 	BUG();
@@ -83,28 +85,17 @@ void soft_restart(unsigned long addr)
 }
 
 /*
- *  Enter non-interruptable CPU halt state
- */
-static void cpu_halt(void)
-{
-	local_irq_disable();
-	while (1)
-		cpu_do_idle();
-}
-
-/*
  * Called by kexec, immediately prior to machine_kexec().
  *
  * This must completely disable all secondary CPUs; simply causing those CPUs
  * to execute e.g. a RAM-based pin loop is not sufficient. This allows the
  * kexec'd kernel to use any and all RAM as it sees fit, without having to
  * avoid any code or data used by any SW CPU pin loop. The CPU hotplug
- * functionality embodied in disable_nonboot_cpus() to achieve this.
+ * functionality embodied in smp_shutdown_nonboot_cpus() to achieve this.
  */
 void machine_shutdown(void)
 {
-	disable_nonboot_cpus();
-        cpu_halt();
+	smp_shutdown_nonboot_cpus(reboot_cpu);
 }
 
 /*
@@ -114,8 +105,9 @@ void machine_shutdown(void)
  */
 void machine_halt(void)
 {
+	local_irq_disable();
 	smp_send_stop();
-        cpu_halt();
+	while (1);
 }
 
 /*
@@ -131,7 +123,6 @@ void machine_power_off(void)
 
 	if (pm_power_off)
 		pm_power_off();
-        cpu_halt();
 }
 
 #ifdef CONFIG_ARM_FLUSH_CONSOLE_ON_RESTART
@@ -175,19 +166,12 @@ void machine_restart(char *cmd)
 	local_irq_disable();
 	smp_send_stop();
 
-	/* Flush the console to make sure all the relevant messages make it
-	 * out to the console drivers */
-	arm_machine_flush_console();
-
-	if (arm_pm_restart)
-		arm_pm_restart(reboot_mode, cmd);
-	else
-		do_kernel_restart(cmd);
+	do_kernel_restart(cmd);
 
 	/* Give a grace period for failure to restart of 1s */
 	mdelay(1000);
 
 	/* Whoops - the platform was unable to reboot. Tell the user! */
 	printk("Reboot failed -- System halted\n");
-	cpu_halt();
+	while (1);
 }

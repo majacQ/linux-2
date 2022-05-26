@@ -1,6 +1,6 @@
 VERSION = 4
 PATCHLEVEL = 4
-SUBLEVEL = 205
+SUBLEVEL = 216
 EXTRAVERSION =
 NAME = Blurry Fish Butt
 
@@ -224,7 +224,6 @@ export srctree objtree VPATH
 CCACHE := $(shell which ccache)
 
 
-
 # SUBARCH tells the usermode build what the underlying arch is.  That is set
 # first, and if a usermode build is happening, the "ARCH=um" on the command
 # line overrides the setting of ARCH below.  If a native build is happening,
@@ -307,8 +306,8 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 
 HOSTCC       = ccache gcc
 HOSTCXX      = ccache g++
-HOSTCFLAGS   := -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer -std=gnu89
-HOSTCXXFLAGS = -O2
+HOSTCFLAGS   := -Wall -Wmissing-prototypes -Wstrict-prototypes -O3 -flto -fomit-frame-pointer -std=c99
+HOSTCXXFLAGS = -O3 -flto
 
 # Decide whether to build built-in, modular, or both.
 # Normally, just do built-in.
@@ -347,7 +346,7 @@ include scripts/Kbuild.include
 # Make variables (CC, etc...)
 AS		= $(CROSS_COMPILE)as
 LD		= $(CROSS_COMPILE)ld
-CC		= ccache $(CROSS_COMPILE)gcc
+CC		= $(CCACHE) $(CROSS_COMPILE)gcc
 CPP		= $(CC) -E
 AR		= $(CROSS_COMPILE)ar
 NM		= $(CROSS_COMPILE)nm
@@ -399,7 +398,12 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -Wno-format-security \
                    -Wno-misleading-indentation \
                    -Wbool-compare \
-		   -std=gnu89 $(call cc-option,-fno-PIE)
+                   -fno-PIE \
+                   -pedantic \
+                   -Warray-bounds \
+                   -Waddress \
+		   -std=c99 \
+                   -flto
 
 ifeq ($(TARGET_BOARD_TYPE),auto)
 KBUILD_CFLAGS    += -DCONFIG_PLATFORM_AUTO
@@ -626,7 +630,7 @@ ifeq ($(shell $(srctree)/scripts/clang-android.sh $(CC) $(CLANG_FLAGS)), y)
 $(error "Clang with Android --target detected. Did you specify CLANG_TRIPLE?")
 endif
 GCC_TOOLCHAIN_DIR := $(dir $(shell which $(CROSS_COMPILE)elfedit))
-CLANG_FLAGS	+= --prefix=$(GCC_TOOLCHAIN_DIR)
+CLANG_FLAGS	+= --prefix=$(GCC_TOOLCHAIN_DIR)$(notdir $(CROSS_COMPILE))
 GCC_TOOLCHAIN	:= $(realpath $(GCC_TOOLCHAIN_DIR)/..)
 endif
 ifneq ($(GCC_TOOLCHAIN),)
@@ -634,10 +638,10 @@ CLANG_FLAGS	+= --gcc-toolchain=$(GCC_TOOLCHAIN)
 endif
 CLANG_FLAGS	+= -no-integrated-as
 CLANG_FLAGS	+= -Werror=unknown-warning-option
-CLANG_FLAGS    += $(call cc-option, -Wno-misleading-indentation)
-CLANG_FLAGS    += $(call cc-option, -Wno-bool-operation)
-CLANG_FLAGS    += $(call cc-option, -Wno-misleading-indentation)
-CLANG_FLAGS    += $(call cc-option, -Wbool-compare)
+CLANG_FLAGS    += -Wno-misleading-indentation
+CLANG_FLAGS    += -Wno-bool-operation
+CLANG_FLAGS    += -Wno-misleading-indentation
+CLANG_FLAGS    += -Wbool-compare
 KBUILD_CFLAGS	+= $(CLANG_FLAGS)
 KBUILD_AFLAGS	+= $(CLANG_FLAGS)
 endif
@@ -661,15 +665,29 @@ KBUILD_CFLAGS	+= $(call cc-disable-warning, attribute-alias)
 ifdef CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE
 KBUILD_CFLAGS += -O2
 else ifdef CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE_O3
-KBUILD_CFLAGS += -O3
-KBUILD_CFLAGS += $(call cc-option, -Wno-misleading-indentation)
-KBUILD_CFLAGS += $(call cc-option, -fno-tree-loop-vectorize)
-KBUILD_CFLAGS += $(call cc-option, -ffunction-sections)
-KBUILD_CFLAGS += $(call cc-option, -fdata-sections)
-KBUILD_CFLAGS += $(call cc-option, -Wbool-compare)
-KBUILD_LDFLAGS += -Wl,--gc-sections
+KBUILD_CFLAGS += -O3 -flto
+KBUILD_CFLAGS += -Wno-misleading-indentation
+KBUILD_CFLAGS += -fno-tree-loop-vectorize
+KBUILD_CFLAGS += -ffunction-sections
+KBUILD_CFLAGS += -fdata-sections
+KBUILD_CFLAGS += -fno-PIE
+KBUILD_CFLAGS += -Warray-bounds
+KBUILD_CFLAGS += -Wbool-compare
+KBUILD_CFLAGS += -Waddress
+KBUILD_LDFLAGS += --gc-sections
 else ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS += -Os
+endif
+
+ifdef CONFIG_CC_OPTIMIZE_FOR_STABLE
+# vanilla
+KBUILD_CFLAGS += -std=c99 -Wall -pedantic
+# extra
+KBUILD_CFLAGS += -Wextra -Wshadow -Wvla -Wpointer-arith -Wstrict-prototypes
+KBUILD_CFLAGS += -Wundef -Wstrict-overflow=4 -Wwrite-strings -Wunreachable-code
+KBUILD_CFLAGS += -Wbad-function-cast -Wdeclaration-after-statement
+# silence
+KBUILD_CFLAGS += -Wno-sign-compare -Wno-unused-parameter -Wno-missing-field-initializers
 endif
 
 ifdef CONFIG_CC_WERROR
@@ -749,7 +767,6 @@ KBUILD_CPPFLAGS += $(call cc-option,-Qunused-arguments,)
 KBUILD_CFLAGS += $(call cc-disable-warning, format-invalid-specifier)
 KBUILD_CFLAGS += $(call cc-disable-warning, gnu)
 KBUILD_CFLAGS += $(call cc-disable-warning, duplicate-decl-specifier)
-KBUILD_CFLAGS += -Wno-undefined-optimized
 KBUILD_CFLAGS += -Wno-tautological-constant-out-of-range-compare
 
 # Quiet clang warning: comparison of unsigned expression < 0 is always false
@@ -1465,9 +1482,6 @@ else # KBUILD_EXTMOD
 
 # We are always building modules
 KBUILD_MODULES := 1
-PHONY += crmodverdir
-crmodverdir:
-	$(cmd_crmodverdir)
 
 PHONY += $(objtree)/Module.symvers
 $(objtree)/Module.symvers:
@@ -1479,7 +1493,7 @@ $(objtree)/Module.symvers:
 
 module-dirs := $(addprefix _module_,$(KBUILD_EXTMOD))
 PHONY += $(module-dirs) modules
-$(module-dirs): crmodverdir $(objtree)/Module.symvers
+$(module-dirs): prepare $(objtree)/Module.symvers
 	$(Q)$(MAKE) $(build)=$(patsubst _module_%,%,$@)
 
 modules: $(module-dirs)
@@ -1519,7 +1533,8 @@ help:
 
 # Dummies...
 PHONY += prepare scripts
-prepare: ;
+prepare:
+	$(cmd_crmodverdir)
 scripts: ;
 endif # KBUILD_EXTMOD
 
@@ -1643,17 +1658,14 @@ endif
 
 # Modules
 /: prepare scripts FORCE
-	$(cmd_crmodverdir)
 	$(Q)$(MAKE) KBUILD_MODULES=$(if $(CONFIG_MODULES),1) \
 	$(build)=$(build-dir)
 # Make sure the latest headers are built for Documentation
 Documentation/: headers_install
 %/: prepare scripts FORCE
-	$(cmd_crmodverdir)
 	$(Q)$(MAKE) KBUILD_MODULES=$(if $(CONFIG_MODULES),1) \
 	$(build)=$(build-dir)
 %.ko: prepare scripts FORCE
-	$(cmd_crmodverdir)
 	$(Q)$(MAKE) KBUILD_MODULES=$(if $(CONFIG_MODULES),1)   \
 	$(build)=$(build-dir) $(@:.ko=.o)
 	$(Q)$(MAKE) -f $(srctree)/scripts/Makefile.modpost
